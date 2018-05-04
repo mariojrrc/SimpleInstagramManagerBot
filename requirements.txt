@@ -1,2 +1,3 @@
+python-telegram-bot
 instabot
 configparser
