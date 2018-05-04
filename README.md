@@ -4,7 +4,7 @@ This library allows you to like certain instagram photos by a list of hashtags o
 
 ## Installing ##
 
-First of all you must have a telegram api key. 
+First of all you must have a telegram api key and python 3 installed. 
  
 Then copy the file `config.ini.dist` to `config.ini` and put your key there.
 
@@ -16,6 +16,10 @@ For non docker user you need to install some dependencies. First is [Python Tele
 
     $ pip install python-telegram-bot --upgrade
     
-And the second is First is [Instabot library](https://github.com/instagrambot/instabot):
+And the second is [Instabot library](https://github.com/instagrambot/instabot):
 
     $ pip install -U instabot
+
+Then you run:
+
+    $ python main.py
