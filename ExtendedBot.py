@@ -1,6 +1,7 @@
 import instabot
 
 
+# Extended class to prevent command line prompting to ask credentials
 class ExtendedBot(instabot.Bot):
     def login(self, **args):
         if self.proxy:
