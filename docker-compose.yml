@@ -9,4 +9,5 @@ services:
     environment:
       PYTHONPATH: .
       PYTHONUSERBASE: /mnt/vendor
+      TELEGRAM_TOKEN: 
     command: python main.py
