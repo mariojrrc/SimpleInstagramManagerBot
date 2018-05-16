@@ -1,5 +1,5 @@
-python-telegram-bot
-instabot
+python-telegram-bot==10.0.2
+instabot==0.4.1
 configparser
 pathlib
 python-dotenv
