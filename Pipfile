@@ -1,2 +1,7 @@
 [requires]
 python_version = "3.6"
+python-telegram-bot = "10.0.2"
+instabot = "0.4.1"
+configparser = "3.5.0"
+pathlib = "1.0.1"
+python-dotenv = "0.8.2"
