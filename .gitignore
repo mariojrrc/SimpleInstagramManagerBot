@@ -3,3 +3,5 @@ config.ini
 *.txt
 *.log
 *.pyc
+!requirements.txt
+!runtime.txt

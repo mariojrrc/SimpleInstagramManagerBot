@@ -5,10 +5,12 @@ from telegram import (ReplyKeyboardMarkup, ReplyKeyboardRemove)
 from telegram.ext import (Updater, CommandHandler, MessageHandler, Filters, RegexHandler,
                           ConversationHandler)
 from pathlib import Path
+from dotenv import load_dotenv
 
 import logging
 import configparser
 import os
+from os.path import join, dirname
 
 from ExtendedBot import ExtendedBot
 
@@ -20,9 +22,9 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 
 logger = logging.getLogger(__name__)
 
-# get token from '.ini' file
-config = configparser.ConfigParser()
-config.read(os.path.dirname(os.path.abspath(__file__)) + '/config.ini')
+# get token from '.env' file
+dotenv_path = join(dirname(__file__), '.env')
+load_dotenv(dotenv_path)
 
 USERNAME, PASSWORD, LIKEBY, LIKEBYHASHTAGS, LIKEBYUSERNAMES = range(5)
 
@@ -259,7 +261,7 @@ def error(bot, update, error):
 def main():
     """Start the bot."""
     # Create the EventHandler and pass it your bot's token.
-    updater = Updater(config.get('telegram', 'token'))
+    updater = Updater(os.getenv('TELEGRAM_TOKEN'))
 
     # Get the dispatcher to register handlers
     dp = updater.dispatcher
