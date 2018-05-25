@@ -26,12 +26,19 @@ logger = logging.getLogger(__name__)
 dotenv_path = join(dirname(__file__), '.env')
 load_dotenv(dotenv_path)
 
-USERNAME, PASSWORD, LIKEBY, LIKEBYHASHTAGS, LIKEBYUSERNAMES = range(5)
+USERNAME, PASSWORD, LIKEBY, LIKEBYHASHTAGS, LIKEFEED, LIKELASTMEDIALIKERS = range(6)
 
 USER_COOKIEFILE_SUFFIX = '_cookie.txt'
 USER_HASHTAGFILE_SUFFIX = '_hashtags.txt'
+USER_SKIPPEDFILE_SUFFIX = '_skipped.txt'
+USER_UNFOLLOWEDFILE_SUFFIX = '_unfollowed.txt'
+USER_WHITELISTFILE_SUFFIX = '_whitelist.txt'
+USER_BLACKLISTFILE_SUFFIX = '_blacklist.txt'
+USER_COMMENTSFILE_SUFFIX = '_comments.txt'
+USER_FRIENDSFILE_SUFFIX = '_friends.txt'
+USER_FOLLOWEDFILE_SUFFIX = '_followed.txt'
 
-reply_keyboard_like_choice = [['hashtags', 'usernames']]
+reply_keyboard_like_choice = [['sim', 'nao']]
 
 
 def start(bot, update):
@@ -60,7 +67,7 @@ def start(bot, update):
 
         # If the file is ok, show options to the user.
         update.message.reply_text('Bem vindo ao SimpleIntagramManager Bot! \nVi que suas credenciais já estão '
-                                  'salvas!\nGostaria de curtir por hashtags ou por usernames?',
+                                  'salvas!\nGostaria de curtir por hashtags?',
                                   reply_markup=ReplyKeyboardMarkup(reply_keyboard_like_choice, one_time_keyboard=True)
                                   )
         return LIKEBY
@@ -89,7 +96,7 @@ def password(bot, update, user_data):
     user = update.message.from_user
     logger.info('Senha informada pelo %s é: %s', user.first_name, update.message.text)
     update.message.reply_text(
-        'Thanks! Gostaria de curtir por hashtags ou por usernames?',
+        'Thanks! Gostaria de curtir por hashtags?',
         reply_markup=ReplyKeyboardMarkup(reply_keyboard_like_choice, one_time_keyboard=True))
 
     # Redirect to ask by which method to like -> hashtag or username
@@ -98,33 +105,54 @@ def password(bot, update, user_data):
 
 def likeby(bot, update, user_data):
 
-    logger.info("Curtir por: %s", update.message.text)
+    logger.info("Curtir por hashtag?: %s", update.message.text)
 
     # Check choice to like by hashtags
-    if update.message.text == 'hashtags':
+    if update.message.text == 'sim':
         update.message.reply_text('Pod crer! Informe as hashtags sem \'#\' e separada por espaços. Caso deseje utilizar'
                                   ' as últimas hashtags envie "recente".',
                                   reply_markup=ReplyKeyboardRemove())
         return LIKEBYHASHTAGS
     # Check choice to like by usernames. NOT IMPLEMENTED YET.
-    elif update.message.text == 'usernames':
-        update.message.reply_text('Pod crer! Informe os nomes de usuários sem \'@\' e separada por espaços.',
-                                  reply_markup=ReplyKeyboardRemove())
-        return LIKEBYUSERNAMES
+    elif update.message.text == 'nao':
+        update.message.reply_text('Pod crer! Deseja curtir automaticamente seu feed?.',
+                                  reply_markup=ReplyKeyboardMarkup(reply_keyboard_like_choice, one_time_keyboard=True))
+        return LIKEFEED
     # If no choice, asks again
     else:
         update.message.reply_text('Não entendi, por favor repita.',
                                   reply_markup=ReplyKeyboardMarkup(reply_keyboard_like_choice, one_time_keyboard=True))
         return LIKEBY
 
+def likefeed(bot, update, user_data):
+
+    logger.info("Curtir o feed? %s", update.message.text)
+
+    # Check choice to like feed
+    if update.message.text == 'sim':
+        instaBot = getBot(update, user_data)
+        update.message.reply_text('Curtindo seu feed;', reply_markup=ReplyKeyboardRemove())
+        instaBot.like_timeline()
+        update.message.reply_text('Finalizado! Deseja curtir seus últimos likers?',
+                                    reply_markup=ReplyKeyboardMarkup(reply_keyboard_like_choice, one_time_keyboard=True))
+        
+        return LIKELASTMEDIALIKERS
+    # Check choice to like by usernames. NOT IMPLEMENTED YET.
+    elif update.message.text == 'nao':
+        update.message.reply_text('Ok! Deseja curtir seus últimos likers?',
+                                    reply_markup=ReplyKeyboardMarkup(reply_keyboard_like_choice, one_time_keyboard=True))
+        
+        return LIKELASTMEDIALIKERS
+    # If no choice, asks again
+    else:
+        update.message.reply_text('Não entendi, por favor repita.',
+                                  reply_markup=ReplyKeyboardMarkup(reply_keyboard_like_choice, one_time_keyboard=True))
+        return LIKEFEED
 
 def likebyhashtags(bot, update, user_data):
 
     # Recent used hashtag file name
     hashtag_file_name = str(update.message.from_user.id) + USER_HASHTAGFILE_SUFFIX
-
-    # User cookie file name
-    cookie_file_name = str(update.message.from_user.id) + USER_COOKIEFILE_SUFFIX
 
     # Check if there the user want use stored hashtags
     if update.message.text == 'recente':
@@ -149,57 +177,14 @@ def likebyhashtags(bot, update, user_data):
         user_file.write(update.message.text)
 
     # Start instagram bot
-    bot = ExtendedBot()
+    bot = getBot(update, user_data)
     logger.info("Hashtags são: %s", "".join(tags))
-
-    # Check if there is cookie file stored
-    # TODO refactor this verification
-    user_file = Path(cookie_file_name)
-    if user_file.is_file():
-        # Try to decode cookie data
-        try:
-            cookie = open(cookie_file_name, 'r')
-            cookie_data = json.load(cookie)
-        except Exception:
-            # If it fails, removes the cookie file and starts chat again
-            user_file.unlink()
-            logger.info('Falha ao carregar o json do cookie usuario: %d', update.message.from_user.id)
-            return start(bot, update)
-
-        if not cookie_data['ds_user'] or not cookie_data['sessionid']:
-            update.message.reply_text(
-                'username ou password não informado no cookie!')
-            user_data.clear()
-            return ConversationHandler.END
-
-        # If the file is ok, build args to login
-        args = {'username': cookie_data['ds_user'], 'password': cookie_data['sessionid'],
-                'cookie_fname': cookie_file_name}
-    # If cookie not stored, get credentials by user_data the has been created throw the chat's workflow
-    else:
-        # If not exists credentials, show message and finishes the chat
-        if not user_data['username'] or not user_data['password']:
-            update.message.reply_text(
-                'username ou password não informado!')
-            user_data.clear()
-            return ConversationHandler.END
-
-        # If credentials are ok, build args to login
-        args = {'username': user_data['username'], 'password': user_data['password'],
-                'cookie_fname': cookie_file_name}
-
-    # Attempt to login, if error show message e finishes conversation
-    update.message.reply_text('Efetuando login e início de curtidas automáticas.')
-    if not bot.login(**args):
-        update.message.reply_text('Erro ao efetuar seu login, por favor verifique as credenciais e tente novamente!')
-        user_data.clear()
-        return ConversationHandler.END
 
     # Builds a task list to like by each hashtag
     tasks_list = []
     for item in tags:
         logger.info("adicionado task para #%s", item)
-        tasks_list.append((bot.like_hashtag, {'hashtag': item, 'amount': 15}))
+        tasks_list.append((bot.like_hashtag, {'hashtag': item, 'amount': 10}))
 
     # Executes the task list
     for func, arg in tasks_list:
@@ -223,15 +208,96 @@ def likebyhashtags(bot, update, user_data):
     # When there is no more tast, show message and finishes chat
     update.message.reply_text('Finalizado! %d fotos foram curtidas!' % bot.total['likes'])
 
-    return ConversationHandler.END
+    update.message.reply_text('Deseja curtir seus feed?',
+                                    reply_markup=ReplyKeyboardMarkup(reply_keyboard_like_choice, one_time_keyboard=True))
 
+    return LIKEFEED
 
-def likebyusernames(bot, update):
-    # this function is not implemented yet.
-    user = update.message.from_user
-    logger.info("Usuarios são: %s", update.message.text)
-    update.message.reply_text('Nenhuma curtida pois não está implementado ainda.')
-    return ConversationHandler.END
+def likelastmedialikers(bot, update, user_data):
+    
+    # Check choice to like feed
+    if update.message.text == 'sim':
+        instaBot = getBot(update, user_data)
+        update.message.reply_text('Curtindo seus últimos likers;', reply_markup=ReplyKeyboardRemove())
+        instaBot.like_your_feed_likers()
+        update.message.reply_text('Finalizado! Até mais.', reply_markup=ReplyKeyboardRemove())
+        
+        return ConversationHandler.END
+    # Check choice to like by usernames. NOT IMPLEMENTED YET.
+    elif update.message.text == 'nao':
+        update.message.reply_text('OK, até mais!', reply_markup=ReplyKeyboardRemove())
+        
+        return ConversationHandler.END
+    # If no choice, asks again
+    else:
+        update.message.reply_text('Não entendi, por favor repita.',
+                                  reply_markup=ReplyKeyboardMarkup(reply_keyboard_like_choice, one_time_keyboard=True))
+        return LIKELASTMEDIALIKERS
+
+def getBot(update, user_data):
+    
+    # User cookie file name
+    cookie_file_name = str(update.message.from_user.id) + USER_COOKIEFILE_SUFFIX
+
+    whitelist_file = str(update.message.from_user.id) + USER_WHITELISTFILE_SUFFIX
+    blacklist_file = str(update.message.from_user.id) + USER_BLACKLISTFILE_SUFFIX
+    comments_file = str(update.message.from_user.id) + USER_COMMENTSFILE_SUFFIX
+    followed_file = str(update.message.from_user.id) + USER_FOLLOWEDFILE_SUFFIX
+    unfollowed_file = str(update.message.from_user.id) + USER_UNFOLLOWEDFILE_SUFFIX
+    skipped_file = str(update.message.from_user.id) + USER_SKIPPEDFILE_SUFFIX
+    friends_file = str(update.message.from_user.id) + USER_FRIENDSFILE_SUFFIX
+
+    args = {'whitelist_file': whitelist_file, 'blacklist_file': blacklist_file,
+            'comments_file': comments_file, 'followed_file': followed_file,
+            'unfollowed_file': unfollowed_file, 'skipped_file': skipped_file,
+            'friends_file': friends_file}
+
+    instaBot = ExtendedBot(**args)
+
+    # Check if there is cookie file stored
+    # TODO refactor this verification
+    user_file = Path(cookie_file_name)
+    if user_file.is_file():
+        # Try to decode cookie data
+        try:
+            cookie = open(cookie_file_name, 'r')
+            cookie_data = json.load(cookie)
+        except Exception:
+            # If it fails, removes the cookie file and starts chat again
+            user_file.unlink()
+            logger.info('Falha ao carregar o json do cookie usuario: %d', update.message.from_user.id)
+            return start(instaBot, update)
+
+        if not cookie_data['ds_user'] or not cookie_data['sessionid']:
+            update.message.reply_text(
+                'username ou password não informado no cookie!')
+            user_data.clear()
+            return ConversationHandler.END
+
+        # If the file is ok, build args to login
+        args = {'username': cookie_data['ds_user'], 'password': cookie_data['sessionid'],
+                'cookie_fname': cookie_file_name,}
+    # If cookie not stored, get credentials by user_data the has been created throw the chat's workflow
+    else:
+        # If not exists credentials, show message and finishes the chat
+        if not user_data['username'] or not user_data['password']:
+            update.message.reply_text(
+                'username ou password não informado!')
+            user_data.clear()
+            return ConversationHandler.END
+
+        # If credentials are ok, build args to login
+        args = {'username': user_data['username'], 'password': user_data['password'],
+                'cookie_fname': cookie_file_name}
+
+    # Attempt to login, if error show message e finishes conversation
+    update.message.reply_text('Verificando login.')
+    if not instaBot.login(**args):
+        update.message.reply_text('Erro ao efetuar seu login, por favor verifique as credenciais e tente novamente!')
+        user_data.clear()
+        return ConversationHandler.END
+
+    return instaBot
 
 
 def help(bot, update):
@@ -271,11 +337,12 @@ def main():
         entry_points=[CommandHandler('start', start)],
 
         states={
-            LIKEBY: [RegexHandler('^(hashtags|usernames)$', likeby, pass_user_data=True)],
+            LIKEBY: [RegexHandler('^(sim|nao)$', likeby, pass_user_data=True)],
             USERNAME: [MessageHandler(Filters.text, username, pass_user_data=True)],
             PASSWORD: [MessageHandler(Filters.text, password, pass_user_data=True)],
             LIKEBYHASHTAGS: [MessageHandler(Filters.text, likebyhashtags, pass_user_data=True)],
-            LIKEBYUSERNAMES: [MessageHandler(Filters.text, likebyusernames, pass_user_data=True)]
+            LIKEFEED: [MessageHandler(Filters.text, likefeed, pass_user_data=True)],
+            LIKELASTMEDIALIKERS: [MessageHandler(Filters.text, likelastmedialikers, pass_user_data=True)]
         },
 
         fallbacks=[CommandHandler('cancel', cancel, pass_user_data=True)]

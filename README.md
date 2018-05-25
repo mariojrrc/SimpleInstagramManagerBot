@@ -1,6 +1,9 @@
 # SimpleInstagramManagerBot
 
-This library allows you to like certain instagram photos by a list of hashtags or usernames (not implemented yet).
+This library allows you to like certain instagram photos by a list of hashtags.
+It also, likes your timeline feed and like the last 3 media of your last likers.
+
+[Check it here](https://t.me/@SimpleInstaManagerBot)
 
 ## Installing ##
 
@@ -23,6 +26,4 @@ Then you run:
 ## TODO ##
 
 - Add translation to English
-- Receive params of amount to like medias (default is 15)
-- Like recente media from usernames
-- Like timeline feed
+- Receive params of amount to like medias (default is 10)
