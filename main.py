@@ -250,7 +250,8 @@ def getBot(update, user_data):
     args = {'whitelist_file': whitelist_file, 'blacklist_file': blacklist_file,
             'comments_file': comments_file, 'followed_file': followed_file,
             'unfollowed_file': unfollowed_file, 'skipped_file': skipped_file,
-            'friends_file': friends_file}
+            'friends_file': friends_file, 'filter_users':True,'filter_business_accounts':False,
+            'filter_verified_accounts':False}
 
     instaBot = ExtendedBot(**args)
 
